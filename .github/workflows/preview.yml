@@ -1,0 +1,49 @@
+# Plan morning-digest § 3–4. Saves /digest/2026-10-28 as one HTML file and puts it on GitHub
+# Pages. The preview is built here and never committed (ADR 0003). The banner carries the repo
+# secret LANE_MARKER; delete the secret and run again to take the marker off the same link.
+name: preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack pnpm install --frozen-lockfile
+      - name: Save the page
+        env:
+          LANE_MARKER: ${{ secrets.LANE_MARKER }}
+          PORT: '8787'
+        run: |
+          corepack pnpm start &
+          for i in $(seq 1 30); do curl -sf localhost:8787/health >/dev/null && break; sleep 1; done
+          mkdir -p _site
+          curl -sf localhost:8787/digest/2026-10-28 -o _site/index.html
+          kill %1 || true
+          grep -q '<span class="marker">' _site/index.html
+          if [ -z "$LANE_MARKER" ]; then grep -q 'no marker set' _site/index.html; fi
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+          retention-days: 1
+      - id: deploy
+        uses: actions/deploy-pages@v4
