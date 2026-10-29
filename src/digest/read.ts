@@ -13,7 +13,7 @@ const isStatus = (value: unknown): value is RunStatus =>
 const nonEmpty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
 // Parse one log line at the edge. null means a bad line (counted, never thrown).
-const parseLine = (text: string): RunLine | null => {
+export const parseLine =(text: string): RunLine | null => {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
